@@ -26,7 +26,9 @@ Built in phases — each phase is runnable on its own.
       poles, zeros, order, open-loop stability, damping ratio and natural frequency.
 - [x] **Phase 2 — Controller designs.** Auto-design P, PI, PID (Ziegler-Nichols with a
       loop-shaping fallback), lead and lag, behind one common interface; close the loop.
-- [ ] Phase 3 — Performance metrics and ranking.
+- [x] **Phase 3 — Metrics & ranking.** Measure six metrics (rise/settling time,
+      overshoot, steady-state error, gain/phase margin) per closed loop with a
+      stability guard; normalise, weight and rank into a recommendation.
 - [ ] Phase 4 — ML dataset generation and metric prediction (Jupyter notebooks).
 - [ ] Phase 5 — FastAPI backend (REST API).
 - [ ] Phase 6 — React + Vite frontend with interactive plots.
@@ -42,6 +44,7 @@ pip install -r requirements.txt
 ```bash
 python scripts/demo_phase1.py   # analysis engine on classic plants
 python scripts/demo_phase2.py   # design & close the loop for all 5 controllers
+python scripts/demo_phase3.py   # full comparison leaderboard + recommendation
 ```
 
 ```python
