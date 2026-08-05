@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Data / models (generated)
+data/*.csv
+models/*.joblib
+
+# OS
+.DS_Store
+Thumbs.db
