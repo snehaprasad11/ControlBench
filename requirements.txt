@@ -1,7 +1,15 @@
+# --- core engine (analysis, controllers, metrics, ML) ---
 numpy>=1.24
 scipy>=1.10
 control>=0.10
 scikit-learn>=1.3
 pandas>=2.0
 matplotlib>=3.6
-streamlit>=1.30
+
+# --- backend (REST API) ---
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.0
+
+# --- notebooks (ML dataset generation + exploration) ---
+jupyterlab>=4.0
