@@ -1,0 +1,9 @@
+{
+  "$comment": "Proxy /api to the Render backend so the frontend uses same-origin relative URLs (no CORS). Replace the destination host with your Render URL after deploying the backend.",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://REPLACE-WITH-YOUR-RENDER-APP.onrender.com/api/:path*"
+    }
+  ]
+}

@@ -46,8 +46,13 @@ Built in phases — each phase is runnable on its own.
 ## Install
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt        # engine + API (runtime)
+pip install -r requirements-dev.txt    # + tests and notebooks (matplotlib, jupyter, pytest)
 ```
+
+## Deploy
+
+See [DEPLOY.md](DEPLOY.md) — backend on Render, frontend on Vercel, both free.
 
 ## Try it
 

@@ -1,0 +1,14 @@
+# Render blueprint for the ControlBench API.
+# In Render: New + -> Blueprint -> connect this repo. Or create a Web Service
+# manually with the build/start commands below.
+services:
+  - type: web
+    name: controlbench-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      # Python 3.14 is very new; pin a version Render fully supports.
+      - key: PYTHON_VERSION
+        value: "3.12.7"

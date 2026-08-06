@@ -15,6 +15,7 @@ Interactive docs: http://127.0.0.1:8000/docs
 from __future__ import annotations
 
 import math
+import os
 from pathlib import Path
 
 import numpy as np
@@ -43,13 +44,14 @@ app = FastAPI(
     description="Compare, rank and predict classical controllers for a plant transfer function.",
 )
 
-# Allow the React (Vite) dev server to call the API during development.
+# CORS. In development the Vite dev server proxies /api, so cross-origin requests
+# don't arise; in production the frontend can proxy too (see frontend/vercel.json)
+# or call the API directly. Origins are configurable via the CORS_ORIGINS env var
+# (comma-separated); the default "*" is fine for this public, stateless, auth-less API.
+_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", "http://127.0.0.1:5173",
-        "http://localhost:3000", "http://127.0.0.1:3000",
-    ],
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
