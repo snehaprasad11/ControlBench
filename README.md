@@ -35,7 +35,9 @@ Built in phases — each phase is runnable on its own.
 - [x] **Real-world plants.** `controlbench/sysid.py` identifies a transfer function
       from measured input/output data (ARX + DC-matched pole mapping); notebook 04
       runs the full pipeline on the DaISy hair-dryer and 4TU cascaded-tanks benchmarks.
-- [ ] Phase 5 — FastAPI backend (REST API).
+- [x] **Phase 5 — FastAPI backend.** REST API over the engine: `/api/analyze`,
+      `/api/compare` (metrics + step-response series), `/api/predict`, with CORS and
+      auto-generated Swagger docs.
 - [ ] Phase 6 — React + Vite frontend with interactive plots.
 
 ## Install
@@ -53,10 +55,27 @@ python scripts/demo_phase3.py   # full comparison leaderboard + recommendation
 python scripts/build_ml.py 2000 # build the ML dataset + models (reuses data/ if present)
 ```
 
+### Run the API
+
+```bash
+uvicorn api.main:app --reload
+```
+
+- Interactive Swagger docs: http://127.0.0.1:8000/docs
+- `POST /api/analyze` — plant poles/zeros/stability
+- `POST /api/compare` — ranked controllers with metrics + step responses
+- `POST /api/predict` — instant ML recommendation
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/compare \
+  -H "Content-Type: application/json" \
+  -d '{"num": [1], "den": [1, 3, 3, 1]}'
+```
+
 ### ML notebooks
 
 ```bash
-jupyter lab   # then open notebooks/01..03
+jupyter lab   # then open notebooks/01..04
 ```
 
 - `notebooks/01_generate_dataset.ipynb` — how the synthetic dataset is built.
