@@ -38,7 +38,10 @@ Built in phases — each phase is runnable on its own.
 - [x] **Phase 5 — FastAPI backend.** REST API over the engine: `/api/analyze`,
       `/api/compare` (metrics + step-response series), `/api/predict`, with CORS and
       auto-generated Swagger docs.
-- [ ] Phase 6 — React + Vite frontend with interactive plots.
+- [x] **Phase 6 — React + Vite frontend.** Transfer-function input with example plants
+      and ranking-priority presets; recommendation banner, controller leaderboard, and
+      interactive Plotly step-response + pole–zero charts; instant ML prediction — all
+      driven by the API.
 
 ## Install
 
@@ -55,7 +58,19 @@ python scripts/demo_phase3.py   # full comparison leaderboard + recommendation
 python scripts/build_ml.py 2000 # build the ML dataset + models (reuses data/ if present)
 ```
 
-### Run the API
+### Run the full app (backend + frontend)
+
+```bash
+# terminal 1 — API
+uvicorn api.main:app --reload
+
+# terminal 2 — React frontend (proxies /api to the backend)
+cd frontend
+npm install      # first time only
+npm run dev      # open http://localhost:5173
+```
+
+### Run the API only
 
 ```bash
 uvicorn api.main:app --reload
