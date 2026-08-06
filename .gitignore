@@ -15,6 +15,10 @@ env/
 # work on a fresh clone without a multi-minute rebuild. Regenerate with
 # `python scripts/build_ml.py 2000 regen`.
 
+# Third-party real datasets are NOT redistributed here -- fetch with
+# `python scripts/download_data.py`.
+data/real/
+
 # OS
 .DS_Store
 Thumbs.db

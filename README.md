@@ -32,6 +32,9 @@ Built in phases — each phase is runnable on its own.
 - [x] **Phase 4 — ML component.** Generate a synthetic dataset of stable plants
       labelled by full simulation; train a controller classifier (~91% accuracy) and
       settling-time / overshoot regressors; predict instantly. Three Jupyter notebooks.
+- [x] **Real-world plants.** `controlbench/sysid.py` identifies a transfer function
+      from measured input/output data (ARX + DC-matched pole mapping); notebook 04
+      runs the full pipeline on the DaISy hair-dryer and 4TU cascaded-tanks benchmarks.
 - [ ] Phase 5 — FastAPI backend (REST API).
 - [ ] Phase 6 — React + Vite frontend with interactive plots.
 
@@ -59,6 +62,12 @@ jupyter lab   # then open notebooks/01..03
 - `notebooks/01_generate_dataset.ipynb` — how the synthetic dataset is built.
 - `notebooks/02_train_models.ipynb` — training, scores, feature importance, confusion matrix.
 - `notebooks/03_predict_demo.ipynb` — instant prediction and validation vs the simulator.
+- `notebooks/04_real_world_plant.ipynb` — real measured data → identify `G(s)` → recommend
+  a controller (DaISy hair dryer, 4TU cascaded tanks). Fetch the data first:
+
+```bash
+python scripts/download_data.py   # downloads the real datasets into data/real/
+```
 
 ```python
 from controlbench.analysis import PlantModel
