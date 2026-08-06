@@ -29,7 +29,9 @@ Built in phases — each phase is runnable on its own.
 - [x] **Phase 3 — Metrics & ranking.** Measure six metrics (rise/settling time,
       overshoot, steady-state error, gain/phase margin) per closed loop with a
       stability guard; normalise, weight and rank into a recommendation.
-- [ ] Phase 4 — ML dataset generation and metric prediction (Jupyter notebooks).
+- [x] **Phase 4 — ML component.** Generate a synthetic dataset of stable plants
+      labelled by full simulation; train a controller classifier (~91% accuracy) and
+      settling-time / overshoot regressors; predict instantly. Three Jupyter notebooks.
 - [ ] Phase 5 — FastAPI backend (REST API).
 - [ ] Phase 6 — React + Vite frontend with interactive plots.
 
@@ -45,7 +47,18 @@ pip install -r requirements.txt
 python scripts/demo_phase1.py   # analysis engine on classic plants
 python scripts/demo_phase2.py   # design & close the loop for all 5 controllers
 python scripts/demo_phase3.py   # full comparison leaderboard + recommendation
+python scripts/build_ml.py 2000 # build the ML dataset + models (reuses data/ if present)
 ```
+
+### ML notebooks
+
+```bash
+jupyter lab   # then open notebooks/01..03
+```
+
+- `notebooks/01_generate_dataset.ipynb` — how the synthetic dataset is built.
+- `notebooks/02_train_models.ipynb` — training, scores, feature importance, confusion matrix.
+- `notebooks/03_predict_demo.ipynb` — instant prediction and validation vs the simulator.
 
 ```python
 from controlbench.analysis import PlantModel

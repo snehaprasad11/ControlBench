@@ -11,9 +11,9 @@ env/
 .mypy_cache/
 .ipynb_checkpoints/
 
-# Data / models (generated)
-data/*.csv
-models/*.joblib
+# Note: data/dataset.csv and models/*.joblib ARE committed so the app and notebooks
+# work on a fresh clone without a multi-minute rebuild. Regenerate with
+# `python scripts/build_ml.py 2000 regen`.
 
 # OS
 .DS_Store
