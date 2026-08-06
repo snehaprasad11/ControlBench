@@ -1,8 +1,11 @@
-// Thin client for the ControlBench REST API. In dev, Vite proxies /api to the
-// FastAPI backend (see vite.config.js), so these relative URLs just work.
+// Thin client for the ControlBench REST API.
+//   dev  : VITE_API_BASE is empty -> relative /api, Vite proxies to the backend.
+//   prod : set VITE_API_BASE to the backend origin (e.g. https://xxx.onrender.com)
+//          in Vercel's environment variables -> the frontend calls it directly.
+const BASE = import.meta.env.VITE_API_BASE || ''
 
 async function post(path, body) {
-  const res = await fetch(path, {
+  const res = await fetch(BASE + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -21,7 +24,7 @@ export const compare = (num, den, weights) => post('/api/compare', { num, den, w
 export const predict = (num, den) => post('/api/predict', { num, den })
 
 export async function health() {
-  const res = await fetch('/api/health')
+  const res = await fetch(BASE + '/api/health')
   if (!res.ok) throw new Error('backend unavailable')
   return res.json()
 }

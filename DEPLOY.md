@@ -30,21 +30,27 @@ Deploy the backend first (you need its URL for the frontend).
 
 ## 2. Frontend on Vercel
 
-1. Edit **`frontend/vercel.json`** and replace the destination host with your
-   Render URL from step 1.5:
+The frontend is a **pure static site** that calls the backend directly using the
+`VITE_API_BASE` environment variable. No proxy/rewrite is needed.
 
-   ```json
-   { "rewrites": [
-     { "source": "/api/:path*",
-       "destination": "https://controlbench-api.onrender.com/api/:path*" } ] }
-   ```
+1. Go to <https://vercel.com>, **Add New -> Project**, import the `ControlBench` repo.
+2. **Root Directory = `frontend`** (important — this is the React app). Vercel
+   auto-detects Vite (Build `npm run build`, Output `dist`).
+3. **Environment Variables** -> add:
+   - Name: `VITE_API_BASE`
+   - Value: your Render URL from step 1.5, e.g. `https://controlbench-api.onrender.com`
+     (no trailing slash, no `/api`).
+4. **Do NOT add any "Rewrite" that sends `/` or `/(.*)` to the backend** — that
+   would replace the React app with the API. Only the env var above is needed.
+5. Click **Deploy**. You get a URL like `https://control-bench.vercel.app`.
+6. Open it — the React UI loads and calls the Render backend directly (CORS is open
+   on the backend by default).
 
-2. Commit and push that change.
-3. Go to <https://vercel.com>, **Add New -> Project**, import the `ControlBench` repo.
-4. Set **Root Directory = `frontend`**. Vercel auto-detects Vite
-   (Build `npm run build`, Output `dist`).
-5. Click **Deploy**. You get a URL like `https://controlbench.vercel.app`.
-6. Open it — the UI loads and its `/api` calls are proxied to your Render backend.
+> **Already deployed and seeing `{"detail":"Not Found"}`?** That means every path is
+> being proxied to the backend. Fix it by: Project **Settings -> Rewrites/Redirects**,
+> delete any catch-all to the backend; confirm **Root Directory = `frontend`**; add the
+> `VITE_API_BASE` env var above; then **Redeploy**. (Re-creating the Vercel project from
+> scratch with these settings is the most reliable reset.)
 
 ---
 
