@@ -97,7 +97,7 @@ def _sim_horizon(H) -> float:
 
 def _lock_time(H, tol: float) -> float:
     """Settling time of the phase-step response within +/- tol of the final value."""
-    tvec = np.linspace(0.0, _sim_horizon(H), 4000)
+    tvec = np.linspace(0.0, _sim_horizon(H), 2000)
     try:
         t, y = ct.step_response(H, T=tvec)
     except Exception:
@@ -113,7 +113,7 @@ def _lock_time(H, tol: float) -> float:
     return float(t[outside[-1]]) if outside.size else 0.0
 
 
-def _jitter_peaking_db(H, n_points: int = 2000) -> float:
+def _jitter_peaking_db(H, n_points: int = 1200) -> float:
     """Peak of |H(jw)| in dB over frequency (0 dB = no peaking; type-II loops peak)."""
     poles = ct.poles(H)
     finite = poles[np.abs(poles) > 0]

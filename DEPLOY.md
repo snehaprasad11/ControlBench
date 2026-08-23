@@ -1,8 +1,8 @@
-# Deploying ControlBench
+# Deploying LockBench
 
 The app has two parts, deployed separately and for free:
 
-* **Backend** (FastAPI + ML models) -> **Render**
+* **Backend** (FastAPI + ML surrogate) -> **Render**
 * **Frontend** (React build) -> **Vercel**, which proxies `/api` to the backend.
 
 Deploy the backend first (you need its URL for the frontend).

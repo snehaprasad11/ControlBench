@@ -1,9 +1,9 @@
-# Render blueprint for the ControlBench API.
+# Render blueprint for the LockBench API.
 # In Render: New + -> Blueprint -> connect this repo. Or create a Web Service
 # manually with the build/start commands below.
 services:
   - type: web
-    name: controlbench-api
+    name: lockbench-api
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"

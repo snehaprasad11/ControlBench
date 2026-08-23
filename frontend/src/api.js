@@ -1,4 +1,4 @@
-// Thin client for the ControlBench REST API.
+// Thin client for the LockBench REST API.
 //   dev  : VITE_API_BASE is empty -> relative /api, Vite proxies to the backend.
 //   prod : set VITE_API_BASE to the backend origin (e.g. https://xxx.onrender.com)
 //          in Vercel's environment variables -> the frontend calls it directly.
@@ -20,8 +20,16 @@ async function post(path, body) {
   return res.json()
 }
 
-export const compare = (num, den, weights) => post('/api/compare', { num, den, weights })
-export const predict = (num, den) => post('/api/predict', { num, den })
+async function get(path) {
+  const res = await fetch(BASE + path)
+  if (!res.ok) throw new Error(`Request failed (${res.status})`)
+  return res.json()
+}
+
+export const getDevices = () => get('/api/devices')
+export const design = (body) => post('/api/design', body)
+export const explore = (body) => post('/api/explore', body)
+export const recommend = (body) => post('/api/recommend', body)
 
 export async function health() {
   const res = await fetch(BASE + '/api/health')

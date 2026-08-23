@@ -1,4 +1,4 @@
-"""Tests for the FastAPI backend."""
+"""Tests for the LockBench FastAPI backend."""
 
 from fastapi.testclient import TestClient
 
@@ -6,8 +6,16 @@ from api.main import app
 
 client = TestClient(app)
 
-PLANT = {"num": [1], "den": [1, 3, 3, 1]}          # 1/(s+1)^3
-SECOND_ORDER = {"num": [1], "den": [1, 2, 1]}       # infinite gain margin
+# A realistic ADF4351 job: 2.4 GHz VCO, 10 MHz phase-detector frequency.
+DESIGN = {
+    "device_id": "adf4351",
+    "f_out_hz": 2.4e9,
+    "f_pfd_hz": 10e6,
+    "fc_hz": 20e3,
+    "phase_margin_deg": 50.0,
+    "corner": {"kvco_tol": 0.30, "icp_tol": 0.10},
+    "spec": {"min_phase_margin_deg": 45.0},
+}
 
 
 def test_health():
@@ -16,55 +24,70 @@ def test_health():
     assert r.json()["status"] == "ok"
 
 
-def test_analyze_returns_structure():
-    r = client.post("/api/analyze", json=PLANT)
+def test_devices_lists_real_parts():
+    r = client.get("/api/devices")
+    assert r.status_code == 200
+    ids = {d["id"] for d in r.json()}
+    assert {"adf4351", "lmx2594", "adf5355"} <= ids
+    adf = next(d for d in r.json() if d["id"] == "adf4351")
+    assert adf["vendor"] == "Analog Devices"
+    assert adf["datasheet"].startswith("http")
+
+
+def test_design_returns_filter_metrics_and_plots():
+    r = client.post("/api/design", json=DESIGN)
     assert r.status_code == 200
     body = r.json()
-    assert body["order"] == 3
-    assert body["stable"] is True
-    assert len(body["poles"]) == 3
-    assert set(body["poles"][0]) == {"re", "im"}
+    # loop filter component values are present and positive
+    lf = body["loop_filter"]
+    assert lf["r_ohm"] > 0 and lf["c_main_nf"] > 0
+    # designed to 20 kHz / 50 deg -> measured back close to target
+    assert abs(body["nominal"]["loop_bandwidth_hz"] - 20e3) / 20e3 < 0.25
+    assert abs(body["nominal"]["phase_margin_deg"] - 50.0) < 6.0
+    # PVT sweep: nominal + 4 box corners
+    assert len(body["corners"]) == 5
+    assert any(c["is_nominal"] for c in body["corners"])
+    # plots are populated
+    assert len(body["bode"]["freq_hz"]) == len(body["bode"]["open_mag_db"]) > 0
+    assert len(body["step_response"]["x"]) == len(body["step_response"]["y"]) > 0
 
 
-def test_analyze_rejects_improper_plant():
-    r = client.post("/api/analyze", json={"num": [1, 0, 0], "den": [1, 1]})
+def test_design_rejects_out_of_range_output():
+    bad = {**DESIGN, "f_out_hz": 100e9}     # far above any device's VCO range
+    r = client.post("/api/design", json=bad)
     assert r.status_code == 400
 
 
-def test_compare_returns_ranked_results_with_step_responses():
-    r = client.post("/api/compare", json=PLANT)
+def test_design_unknown_device_404():
+    r = client.post("/api/design", json={**DESIGN, "device_id": "nope"})
+    assert r.status_code == 404
+
+
+def test_explore_returns_ranked_candidates():
+    body_in = {
+        "device_id": "adf4351", "f_out_hz": 2.4e9, "f_pfd_hz": 10e6,
+        "corner": {"kvco_tol": 0.30, "icp_tol": 0.10},
+        "spec": {"min_phase_margin_deg": 45.0, "max_jitter_peaking_db": 3.0},
+    }
+    r = client.post("/api/explore", json=body_in)
     assert r.status_code == 200
     body = r.json()
-    assert body["recommended"] == body["results"][0]["name"]
-    assert {res["name"] for res in body["results"]} == {"P", "PI", "PID", "Lead", "Lag"}
-    # scores are sorted descending
-    scores = [res["score"] for res in body["results"]]
-    assert scores == sorted(scores, reverse=True)
-    # each result carries metrics and a non-empty step response
-    top = body["results"][0]
-    assert "settling_time" in top["metrics"]
-    assert len(top["step_response"]["time"]) == len(top["step_response"]["output"]) > 0
+    assert body["candidates"]
+    # if any pass, the first should be a passing design
+    if body["any_pass"]:
+        assert body["candidates"][0]["passes"]
 
 
-def test_compare_serialises_infinite_margin_as_null():
-    # 2nd-order plant -> phase never hits -180 -> infinite gain margin -> null in JSON
-    r = client.post("/api/compare", json=SECOND_ORDER)
+def test_recommend_uses_surrogate_when_available():
+    body_in = {
+        "device_id": "adf4351", "f_out_hz": 2.4e9, "f_pfd_hz": 10e6,
+        "spec": {"min_phase_margin_deg": 48.0, "max_jitter_peaking_db": 3.0},
+    }
+    r = client.post("/api/recommend", json=body_in)
     assert r.status_code == 200
-    gms = [res["metrics"]["gain_margin_db"] for res in r.json()["results"]]
-    assert any(g is None for g in gms)
-
-
-def test_compare_custom_weights_change_ranking():
-    overshoot_focus = {**PLANT, "weights": {"overshoot": 1.0, "settling_time": 0.0}}
-    r = client.post("/api/compare", json=overshoot_focus)
-    assert r.status_code == 200
-    # the winner under an overshoot-only weighting should have (near) zero overshoot
-    top = r.json()["results"][0]
-    assert top["metrics"]["overshoot"] in (0.0, None) or top["metrics"]["overshoot"] < 5.0
-
-
-def test_predict_returns_a_controller():
-    r = client.post("/api/predict", json=PLANT)
-    # models are committed, so prediction should work
-    assert r.status_code == 200
-    assert r.json()["recommended_controller"] in {"P", "PI", "PID", "Lead", "Lag"}
+    body = r.json()
+    # models are committed, so the surrogate should load and return a recommendation
+    assert body["model_available"] is True
+    if body["recommended_fc_hz"] is not None:
+        assert body["recommended_fc_hz"] > 0
+        assert body["predicted_worst_phase_margin_deg"] >= 48.0 - 1.0
