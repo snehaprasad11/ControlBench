@@ -1,0 +1,15 @@
+# Keep the Docker build context small and reproducible.
+.git
+.github
+**/__pycache__
+**/*.pyc
+.pytest_cache
+frontend/node_modules
+frontend/dist
+notebooks
+docs
+scripts/demo_*.py
+tests
+*.md
+.venv
+venv

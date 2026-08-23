@@ -1,63 +1,39 @@
 # Deploying LockBench
 
-The app has two parts, deployed separately and for free:
+LockBench deploys as **one service** (the FastAPI backend serves the built React app),
+so you get **one URL** for the whole thing — no separate frontend host, no CORS setup,
+no environment variables to wire up.
 
-* **Backend** (FastAPI + ML surrogate) -> **Render**
-* **Frontend** (React build) -> **Vercel**, which proxies `/api` to the backend.
+## Deploy on Render (free)
 
-Deploy the backend first (you need its URL for the frontend).
-
----
-
-## 1. Backend on Render
-
-1. Push everything to GitHub (see the commit block your assistant provided).
+1. Push the repo to GitHub (already done).
 2. Go to <https://render.com> and sign in with GitHub.
-3. **New +** -> **Blueprint** -> select the `ControlBench` repo.
-   Render reads `render.yaml` and configures the service automatically.
-   *(Or **New + -> Web Service** and set: Runtime `Python`, Build
-   `pip install -r requirements.txt`, Start
-   `uvicorn api.main:app --host 0.0.0.0 --port $PORT`, Plan `Free`, and env var
-   `PYTHON_VERSION = 3.12.7`.)*
-4. Click **Apply / Create** and wait for the first build (~3-5 min).
-5. Copy the service URL, e.g. `https://controlbench-api.onrender.com`.
-6. Verify it works: open `<that URL>/docs` (the Swagger UI) or `/api/health`.
+3. Click **New +** → **Web Service**.
+4. Connect and select the **ControlBench** repo.
+5. Render detects the `Dockerfile` and fills everything in automatically.
+   Leave the defaults, set **Instance Type = Free**, click **Create Web Service**.
+6. Wait for the first build (~5–8 min — it builds the React app and the Python image).
+7. When it says **Live**, copy the URL, e.g. `https://lockbench.onrender.com`.
+   **That URL is the whole app** — open it and the UI loads and talks to its own API.
 
-> **Free-tier note:** the service sleeps after ~15 minutes of inactivity, so the
-> first request after idle takes ~30-50s to wake. Subsequent requests are fast.
+> You can also use **New + → Blueprint** instead of step 3–5; Render reads `render.yaml`
+> and configures the same service. Either way works.
 
----
+### Verify it
 
-## 2. Frontend on Vercel
+- `https://<your-url>/` → the app UI.
+- `https://<your-url>/api/health` → `{"status":"ok","ml_model_loaded":true}`.
 
-The frontend is a **pure static site** that calls the backend directly using the
-`VITE_API_BASE` environment variable. No proxy/rewrite is needed.
+### Free-tier note (important)
 
-1. Go to <https://vercel.com>, **Add New -> Project**, import the `ControlBench` repo.
-2. **Root Directory = `frontend`** (important — this is the React app). Vercel
-   auto-detects Vite (Build `npm run build`, Output `dist`).
-3. **Environment Variables** -> add:
-   - Name: `VITE_API_BASE`
-   - Value: your Render URL from step 1.5, e.g. `https://controlbench-api.onrender.com`
-     (no trailing slash, no `/api`).
-4. **Do NOT add any "Rewrite" that sends `/` or `/(.*)` to the backend** — that
-   would replace the React app with the API. Only the env var above is needed.
-5. Click **Deploy**. You get a URL like `https://control-bench.vercel.app`.
-6. Open it — the React UI loads and calls the Render backend directly (CORS is open
-   on the backend by default).
+The free instance **sleeps after ~15 min idle**, so the *first* visit after it's been
+idle takes ~30–50 s to wake up. LockBench shows a "Waking the backend…" message during
+that time (by design), then loads normally. Every visit after that is fast.
 
-> **Already deployed and seeing `{"detail":"Not Found"}`?** That means every path is
-> being proxied to the backend. Fix it by: Project **Settings -> Rewrites/Redirects**,
-> delete any catch-all to the backend; confirm **Root Directory = `frontend`**; add the
-> `VITE_API_BASE` env var above; then **Redeploy**. (Re-creating the Vercel project from
-> scratch with these settings is the most reliable reset.)
+To avoid cold starts entirely, upgrade to a paid Render instance, or host the same
+Dockerfile on another platform (Fly.io, Railway) — the container is portable.
 
----
+## Share it
 
-## 3. Share it
-
-Your public link is the **Vercel URL**. Put it in the README and your resume.
-
-If the very first load is slow, that's the Render backend waking up — reload once
-it's warm. To avoid cold starts entirely, upgrade the Render plan or switch to a
-single-container host (ask the assistant to generate a `Dockerfile`).
+Your public link is the Render URL. Put it in the README header (top of the file) and on
+your resume/transcript.

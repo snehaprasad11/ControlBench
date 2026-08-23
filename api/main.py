@@ -26,6 +26,7 @@ import numpy as np
 import control as ct
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from controlbench import __version__
 from controlbench.pll import (
@@ -295,3 +296,13 @@ def recommend(inp: RecommendInput) -> RecommendResponse:
         predicted_worst_jitter_peaking_db=rec.predicted["worst_jitter_peaking_db"],
         note="Predicted from the ML surrogate; press Design to verify against the model.",
     )
+
+
+# ------------------------------------------------------------------ frontend
+# Serve the built React app from the same origin as the API, so the whole thing
+# is one deployable service at one URL. The API routes above are matched first;
+# this catch-all mount serves index.html and the static assets for everything else.
+# (Only mounted when a build exists — e.g. in the Docker image or after `npm run build`.)
+_STATIC_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="frontend")

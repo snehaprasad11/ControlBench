@@ -1,14 +1,15 @@
-# Render blueprint for the LockBench API.
-# In Render: New + -> Blueprint -> connect this repo. Or create a Web Service
-# manually with the build/start commands below.
+# Render blueprint for LockBench — a single Docker service that serves both the
+# FastAPI backend and the built React frontend at one URL.
+#
+# In Render: New + -> Blueprint -> connect this repo (Render reads this file and the
+# Dockerfile). Or: New + -> Web Service -> connect the repo -> Render auto-detects the
+# Dockerfile -> Create. Nothing else to configure.
 services:
   - type: web
-    name: lockbench-api
-    runtime: python
+    name: lockbench
+    runtime: docker
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
     envVars:
-      # Python 3.14 is very new; pin a version Render fully supports.
-      - key: PYTHON_VERSION
-        value: "3.12.7"
+      - key: CORS_ORIGINS
+        value: "*"
