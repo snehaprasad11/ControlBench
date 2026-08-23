@@ -22,7 +22,7 @@ import control as ct
 
 from controlbench.pll import (
     get_device, divider_for_output, design_pll, evaluate,
-    CornerSpec, sweep_corners,
+    CornerSpec, sweep_corners, phase_noise,
 )
 from controlbench.pll import ml
 
@@ -85,6 +85,20 @@ def fig_pvt():
     fig.tight_layout(); fig.savefig(IMG / "pvt_corners.png"); plt.close(fig)
 
 
+def fig_phase_noise():
+    dev, _n, pll = _adf4351_design()
+    pn = phase_noise(pll, 2.4e9, 10e6)
+    fig, ax = plt.subplots(figsize=(7, 3.6))
+    ax.semilogx(pn.offset_hz, pn.inband_dbc, color=BLUE, lw=1.2, ls=":", label="PLL / ref")
+    ax.semilogx(pn.offset_hz, pn.vco_dbc, color=ACCENT, lw=1.2, ls=":", label="VCO")
+    ax.semilogx(pn.offset_hz, pn.total_dbc, color="#0b8fa8", lw=2.4, label="total")
+    ax.set_xlabel("offset frequency (Hz)"); ax.set_ylabel("ℒ(f) (dBc/Hz)")
+    ax.set_ylim(-160, -60); ax.legend(fontsize=8)
+    ax.set_title(f"ADF4351 phase noise — {pn.rms_jitter_s*1e12:.1f} ps RMS jitter "
+                 f"(12 kHz–20 MHz)", color=NAVY)
+    fig.tight_layout(); fig.savefig(IMG / "phase_noise.png"); plt.close(fig)
+
+
 def fig_ml_parity():
     """ML surrogate predictions vs the physics model, on a held-out sample."""
     X, Y = ml.make_dataset(n_samples=250, seed=7)         # fresh, unseen data
@@ -108,9 +122,10 @@ def fig_ml_parity():
 
 def main():
     print("Rendering figures to docs/img/ ...")
-    fig_bode();       print("  bode.png")
-    fig_pvt();        print("  pvt_corners.png")
-    fig_ml_parity();  print("  ml_parity.png")
+    fig_bode();         print("  bode.png")
+    fig_pvt();          print("  pvt_corners.png")
+    fig_phase_noise();  print("  phase_noise.png")
+    fig_ml_parity();    print("  ml_parity.png")
     print("done.")
 
 

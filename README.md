@@ -32,6 +32,11 @@ design must respect:
 
 ![PVT corner sweep](docs/img/pvt_corners.png)
 
+The output phase noise — flat in-band (PLL/reference), the peaking bump at the loop
+bandwidth, and VCO roll-off outside it — integrated to an RMS jitter (the headline spec):
+
+![Phase noise](docs/img/phase_noise.png)
+
 The ML surrogate reproduces the physics model on held-out designs (worst-case phase margin
 near-exactly; lock time with some spread), so it is a safe accelerator for inverse design:
 
@@ -168,15 +173,20 @@ Stated plainly, because the honest scope is part of the engineering:
 
 - **Linear loop model.** LockBench uses the standard continuous-time linear PLL model
   (Gardner's charge-pump approximation). It captures loop dynamics — bandwidth, margin,
-  lock, peaking — but not sampling effects near f_PFD, charge-pump nonlinearity/dead-zone,
-  or true phase noise. Loop bandwidth is kept well below f_PFD, where this model holds.
+  lock, peaking — but not sampling effects near f_PFD or charge-pump nonlinearity/dead-zone.
+  Loop bandwidth is kept well below f_PFD, where this model holds.
+- **Phase noise & jitter are first-order estimates.** The in-band contribution is anchored
+  to each device's datasheet figure and loop-shaped by |H|²; the VCO contribution uses a
+  *representative* −120 dBc/Hz-at-1 MHz profile (scaled with carrier) shaped by |1−H|².
+  Integrated RMS jitter uses the 12 kHz–20 MHz band. It reproduces the shape and ballpark
+  of real phase noise, but is not a substitute for a measured plot or a per-device VCO model.
+- **Reference spur** is an order-of-magnitude estimate from the loop attenuation at f_PFD
+  plus a representative charge-pump leakage floor — indicative, not a spur measurement.
 - **Kvco across the band.** Real VCO gain varies with the tuning band; the device library
   uses a representative Kvco per part (flagged in each `source_notes`) and lets the PVT
   sweep perturb it ±30%. Band-resolved Kvco tables are a natural extension.
 - **Lock time** is defined here as the settling of the closed-loop phase step to ±2% — a
   clean, model-consistent proxy for the datasheet's frequency-settling spec.
-- **Reference spurs** are not yet modelled (they depend on ripple and the higher-order
-  pole); only the metrics above are computed.
 - **ML ground truth is the linear model, not SPICE/silicon.** The surrogate accelerates
   search over that model; extending the ground truth to a behavioural/transistor-level
   model is the clear next step.
