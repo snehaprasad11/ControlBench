@@ -1,7 +1,7 @@
 // Thin client for the LockBench REST API.
-//   dev  : VITE_API_BASE is empty -> relative /api, Vite proxies to the backend.
-//   prod : set VITE_API_BASE to the backend origin (e.g. https://xxx.onrender.com)
-//          in Vercel's environment variables -> the frontend calls it directly.
+//   In production the FastAPI backend serves this frontend from the same origin, so the
+//   default empty base -> relative "/api" just works. In dev, Vite proxies "/api" to the
+//   backend. VITE_API_BASE remains an optional override for a separately hosted API.
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 async function post(path, body) {

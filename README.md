@@ -183,7 +183,8 @@ Stated plainly, because the honest scope is part of the engineering:
 
 ## Deploy
 
-See [DEPLOY.md](DEPLOY.md) — backend on Render, frontend on Vercel, both free.
+See [DEPLOY.md](DEPLOY.md) — one Docker service on Render (free) serving the API and the
+built frontend at a single URL.
 
 ---
 
