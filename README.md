@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/snehaprasad11/ControlBench/actions/workflows/ci.yml/badge.svg)](https://github.com/snehaprasad11/ControlBench/actions/workflows/ci.yml)
 
-### 🔗 Live app: _deploying — link will appear here_
+### 🔗 Live app: **https://controlbench.onrender.com**
 
 **Design a charge-pump PLL loop filter for a real synthesizer IC — and prove it holds
 across every PVT corner.**
