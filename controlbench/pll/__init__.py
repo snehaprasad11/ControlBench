@@ -18,6 +18,7 @@ from .robust import (
     PLLSpec, RobustReport, CornerResult, DesignCandidate,
     sweep_corners, robust_evaluate, explore_robust_design,
 )
+from .noise import PhaseNoise, phase_noise, reference_spur_dbc
 
 __all__ = [
     "Device", "load_devices", "get_device",
@@ -27,4 +28,5 @@ __all__ = [
     "CornerSpec", "Corner", "generate_corners", "apply_corner",
     "PLLSpec", "RobustReport", "CornerResult", "DesignCandidate",
     "sweep_corners", "robust_evaluate", "explore_robust_design",
+    "PhaseNoise", "phase_noise", "reference_spur_dbc",
 ]

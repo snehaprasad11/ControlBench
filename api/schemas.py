@@ -116,6 +116,16 @@ class BodeOut(BaseModel):
     closed_mag_db: list[float]
 
 
+class PhaseNoiseOut(BaseModel):
+    offset_hz: list[float]
+    total_dbc: list[float]
+    inband_dbc: list[float]
+    vco_dbc: list[float]
+    rms_jitter_s: float
+    jitter_band_hz: list[float]
+    reference_spur_dbc: float
+
+
 class DesignResponse(BaseModel):
     device: DeviceOut
     n: float
@@ -129,6 +139,7 @@ class DesignResponse(BaseModel):
     corners: list[CornerMetricsOut]
     step_response: Series          # phase-step lock transient (normalised)
     bode: BodeOut
+    phase_noise: PhaseNoiseOut
 
 
 class CandidateOut(BaseModel):

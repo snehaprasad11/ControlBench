@@ -48,6 +48,9 @@ class Device:
     pfd_max_hz: float
     n_min: int
     n_max: int
+    phase_noise_dbc_hz: float          # datasheet in-band figure, or normalized FOM
+    phase_noise_offset_hz: float | None  # offset of that figure; None => it is a FOM
+    phase_noise_ref_out_hz: float | None  # carrier the figure was measured at
     datasheet: str
     source_notes: str
 
@@ -94,6 +97,11 @@ def _from_json(d: dict) -> Device:
         pfd_max_hz=float(d["pfd_max_hz"]),
         n_min=int(d["n_min"]),
         n_max=int(d["n_max"]),
+        phase_noise_dbc_hz=float(d["phase_noise_dbc_hz"]),
+        phase_noise_offset_hz=(None if d.get("phase_noise_offset_hz") is None
+                               else float(d["phase_noise_offset_hz"])),
+        phase_noise_ref_out_hz=(None if d.get("phase_noise_ref_out_hz") is None
+                                else float(d["phase_noise_ref_out_hz"])),
         datasheet=d["datasheet"],
         source_notes=d["source_notes"],
     )

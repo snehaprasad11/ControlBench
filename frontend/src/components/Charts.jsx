@@ -58,6 +58,26 @@ export function JitterChart({ bode }) {
   return <Plot className="plot" data={data} layout={layout} config={CONFIG} useResizeHandler style={{ width: '100%' }} />
 }
 
+// Output phase noise vs offset frequency — total, with the PLL/reference and VCO
+// contributions. The peak near the loop bandwidth is the jitter-peaking bump.
+export function PhaseNoiseChart({ pn }) {
+  if (!pn) return null
+  const data = [
+    { x: pn.offset_hz, y: pn.inband_dbc, type: 'scatter', mode: 'lines',
+      name: 'PLL / ref', line: { color: '#4c8dff', width: 1.3, dash: 'dot' } },
+    { x: pn.offset_hz, y: pn.vco_dbc, type: 'scatter', mode: 'lines',
+      name: 'VCO', line: { color: '#fbbf24', width: 1.3, dash: 'dot' } },
+    { x: pn.offset_hz, y: pn.total_dbc, type: 'scatter', mode: 'lines',
+      name: 'total', line: { color: '#22d3ee', width: 2.6 } },
+  ]
+  const layout = {
+    ...BASE_LAYOUT, height: 300,
+    xaxis: { title: 'offset frequency (Hz)', type: 'log', gridcolor: GRID, zeroline: false },
+    yaxis: { title: 'ℒ(f) (dBc/Hz)', gridcolor: GRID, zeroline: false },
+  }
+  return <Plot className="plot" data={data} layout={layout} config={CONFIG} useResizeHandler style={{ width: '100%' }} />
+}
+
 // Normalised phase-step (lock) transient — where it settles is the lock time.
 export function LockChart({ step }) {
   const data = [{

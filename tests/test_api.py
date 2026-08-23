@@ -50,6 +50,11 @@ def test_design_returns_filter_metrics_and_plots():
     # plots are populated
     assert len(body["bode"]["freq_hz"]) == len(body["bode"]["open_mag_db"]) > 0
     assert len(body["step_response"]["x"]) == len(body["step_response"]["y"]) > 0
+    # phase noise + jitter + spur
+    pn = body["phase_noise"]
+    assert len(pn["offset_hz"]) == len(pn["total_dbc"]) > 0
+    assert pn["rms_jitter_s"] > 0
+    assert pn["reference_spur_dbc"] < 0
 
 
 def test_design_rejects_out_of_range_output():

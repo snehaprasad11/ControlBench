@@ -34,13 +34,14 @@ from controlbench.pll import (
     design_pll, divider_for_output, evaluate,
     PLLModel, PLLMetrics,
     CornerSpec, PLLSpec, robust_evaluate, explore_robust_design,
+    phase_noise, reference_spur_dbc,
 )
 from controlbench.pll import ml
 
 from .schemas import (
     DesignInput, ExploreInput, RecommendInput,
     DeviceOut, LoopFilterOut, MetricsOut, CornerMetricsOut, WorstCaseOut,
-    Series, BodeOut, DesignResponse, CandidateOut, ExploreResponse, RecommendResponse,
+    Series, BodeOut, PhaseNoiseOut, DesignResponse, CandidateOut, ExploreResponse, RecommendResponse,
 )
 
 MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "pll_surrogate.joblib"
@@ -176,6 +177,21 @@ def _bode(pll: PLLModel, fc_hint_hz: float) -> BodeOut:
     )
 
 
+def _phase_noise(pll: PLLModel, f_out_hz: float, f_pfd_hz: float) -> PhaseNoiseOut:
+    """Phase-noise profile, integrated RMS jitter, and a reference-spur estimate."""
+    pn = phase_noise(pll, f_out_hz, f_pfd_hz)
+    spur = reference_spur_dbc(pll, f_pfd_hz)
+    return PhaseNoiseOut(
+        offset_hz=pn.offset_hz,
+        total_dbc=pn.total_dbc,
+        inband_dbc=pn.inband_dbc,
+        vco_dbc=pn.vco_dbc,
+        rms_jitter_s=pn.rms_jitter_s,
+        jitter_band_hz=list(pn.jitter_band_hz),
+        reference_spur_dbc=spur,
+    )
+
+
 def _step(pll: PLLModel, lock_time_s: float | None) -> Series:
     """Normalised phase-step (lock) transient of the closed loop."""
     H = pll.closed_loop()
@@ -245,6 +261,7 @@ def design(inp: DesignInput) -> DesignResponse:
         corners=corners,
         step_response=_step(pll, report.nominal.lock_time_s),
         bode=_bode(pll, inp.fc_hz),
+        phase_noise=_phase_noise(pll, inp.f_out_hz, inp.f_pfd_hz),
     )
 
 

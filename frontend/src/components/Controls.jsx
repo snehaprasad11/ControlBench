@@ -86,7 +86,9 @@ export default function Controls({ devices, device, form, setField, onDesign, on
       </div>
 
       <div className="actions">
-        <button className="primary" onClick={onDesign} disabled={busy}>Design & check PVT</button>
+        <button className="primary" onClick={onDesign} disabled={busy}>
+          {busy ? <span className="spinner" /> : null}{busy ? 'Working…' : 'Design & check PVT'}
+        </button>
         <button onClick={onExplore} disabled={busy}>Find robust design</button>
         <button onClick={onRecommend} disabled={busy}>⚡ ML recommend</button>
       </div>

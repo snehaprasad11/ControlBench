@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { getDevices, design, explore, recommend } from './api'
 import Controls from './components/Controls'
 import Verdict from './components/Verdict'
+import HeadlineStats from './components/HeadlineStats'
 import { LoopFilterCard, MetricsTable, CornerTable } from './components/DesignResult'
-import { BodeChart, JitterChart, LockChart } from './components/Charts'
+import { BodeChart, JitterChart, LockChart, PhaseNoiseChart } from './components/Charts'
 import Explore from './components/Explore'
 import Recommend from './components/Recommend'
 
@@ -149,7 +150,7 @@ export default function App() {
           />
         </div>
 
-        <div className="results">
+        <div className={'results' + (busy ? ' recomputing' : '')}>
           {error && <div className="card error">{error}</div>}
 
           {recommendRes && (
@@ -165,6 +166,14 @@ export default function App() {
           {result && (
             <>
               <Verdict passes={result.passes} violations={result.violations} />
+              <HeadlineStats result={result} />
+
+              {result.phase_noise && (
+                <div className="card">
+                  <h2>Phase noise <span className="sub">total = PLL/reference (in-band) + VCO (out-of-band)</span></h2>
+                  <PhaseNoiseChart pn={result.phase_noise} />
+                </div>
+              )}
 
               <div className="card">
                 <h2>Open-loop Bode <span className="sub">crossover = loop bandwidth; phase gap to −180° = phase margin</span></h2>

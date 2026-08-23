@@ -83,7 +83,34 @@ body::after {
 .grid { display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start; }
 .grid.two-col { grid-template-columns: 1fr 1fr; }
 @media (max-width: 980px) { .grid, .grid.two-col { grid-template-columns: 1fr; } }
-.results { min-width: 0; }
+.results { min-width: 0; transition: opacity 0.25s ease; }
+.results.recomputing { opacity: 0.5; pointer-events: none; }
+
+/* headline stat tiles */
+.headline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+@media (max-width: 640px) { .headline { grid-template-columns: repeat(2, 1fr); } }
+.stat {
+  position: relative; padding: 16px; border-radius: 14px; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(14px);
+  animation: rise 0.4s ease both;
+}
+.stat::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; }
+.stat.cyan::before { background: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
+.stat.violet::before { background: var(--violet); box-shadow: 0 0 14px var(--violet); }
+.stat.amber::before { background: var(--amber); box-shadow: 0 0 14px var(--amber); }
+.stat.green::before { background: var(--green); box-shadow: 0 0 14px var(--green); }
+.stat.red::before { background: var(--red); box-shadow: 0 0 14px var(--red); }
+.stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+.stat-value { display: block; font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--ink); margin: 6px 0 2px; }
+.stat-tag { font-size: 10px; color: var(--faint); font-family: var(--font-mono); }
+
+/* button spinner */
+.spinner {
+  display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px;
+  border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- cards ---------- */
 .card {
