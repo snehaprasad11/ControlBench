@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getDevices, design, explore, recommend, health } from './api'
+import { getDevices, design, explore, recommend } from './api'
 import Controls from './components/Controls'
 import Verdict from './components/Verdict'
 import { LoopFilterCard, MetricsTable, CornerTable } from './components/DesignResult'
@@ -45,21 +45,41 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [online, setOnline] = useState(null)
+  const [bootMsg, setBootMsg] = useState('Loading device library…')
 
   const device = devices.find((d) => d.id === form?.deviceId)
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
-  // Boot: check health, load the real device library, seed the form.
+  // Boot: load the real device library, retrying so a cold (sleeping) backend on a
+  // free tier wakes up gracefully instead of showing an error on first load.
   useEffect(() => {
-    health().then(() => setOnline(true)).catch(() => setOnline(false))
-    getDevices().then((devs) => {
-      setDevices(devs)
-      const d = devs[0]
-      setForm({
-        deviceId: d.id, ...defaultsFor(d),
-        kvcoTolPct: 30, icpTolPct: 10, minPmDeg: 45, maxPeakDb: 4,
-      })
-    }).catch((e) => setError(e.message))
+    let cancelled = false
+    async function boot() {
+      for (let attempt = 1; attempt <= 15 && !cancelled; attempt++) {
+        try {
+          const devs = await getDevices()
+          if (cancelled) return
+          setOnline(true)
+          setDevices(devs)
+          const d = devs[0]
+          setForm({
+            deviceId: d.id, ...defaultsFor(d),
+            kvcoTolPct: 30, icpTolPct: 10, minPmDeg: 45, maxPeakDb: 4,
+          })
+          return
+        } catch {
+          if (cancelled) return
+          setOnline(false)
+          setBootMsg(attempt < 3
+            ? 'Loading device library…'
+            : `Waking the backend… free hosting can take ~30 s to spin up (attempt ${attempt})`)
+          await new Promise((r) => setTimeout(r, 3000))
+        }
+      }
+      if (!cancelled) setBootMsg('Backend unavailable — confirm the API is running and VITE_API_BASE is set.')
+    }
+    boot()
+    return () => { cancelled = true }
   }, [])
 
   // Re-seed operating point when the device changes.
@@ -104,7 +124,7 @@ export default function App() {
   }, [form])
 
   if (!form) {
-    return <div className="app"><div className="card loading">{error || 'Loading device library…'}</div></div>
+    return <div className="app"><div className="card loading">{bootMsg}</div></div>
   }
 
   return (

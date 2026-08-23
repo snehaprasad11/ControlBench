@@ -6,10 +6,10 @@ const BASE_LAYOUT = {
   margin: { l: 56, r: 56, t: 10, b: 44 },
   paper_bgcolor: 'rgba(0,0,0,0)',
   plot_bgcolor: 'rgba(0,0,0,0)',
-  font: { color: '#1c2733', size: 11 },
+  font: { color: '#8ea3bd', size: 11, family: 'JetBrains Mono, monospace' },
   legend: { orientation: 'h', y: -0.25 },
 }
-const GRID = '#e6edf5'
+const GRID = 'rgba(255,255,255,0.07)'
 const CONFIG = { displayModeBar: false, responsive: true }
 
 // Open-loop Bode: magnitude (dB) + phase (deg) vs frequency, on twin y-axes.
@@ -18,11 +18,11 @@ export function BodeChart({ bode, bandwidthHz }) {
   const data = [
     {
       x: bode.freq_hz, y: bode.open_mag_db, type: 'scatter', mode: 'lines',
-      name: '|L| (dB)', line: { color: '#4c8dff', width: 2 }, yaxis: 'y',
+      name: '|L| (dB)', line: { color: '#22d3ee', width: 2.4 }, yaxis: 'y',
     },
     {
       x: bode.freq_hz, y: bode.open_phase_deg, type: 'scatter', mode: 'lines',
-      name: '∠L (°)', line: { color: '#e8873b', width: 2 }, yaxis: 'y2',
+      name: '∠L (°)', line: { color: '#fbbf24', width: 2.4 }, yaxis: 'y2',
     },
   ]
   const layout = {
@@ -46,7 +46,7 @@ export function BodeChart({ bode, bandwidthHz }) {
 export function JitterChart({ bode }) {
   const data = [{
     x: bode.freq_hz, y: bode.closed_mag_db, type: 'scatter', mode: 'lines',
-    name: '|H| (dB)', line: { color: '#1a9e6a', width: 2 },
+    name: '|H| (dB)', line: { color: '#34d399', width: 2.4 },
   }]
   const layout = {
     ...BASE_LAYOUT, height: 240,
@@ -62,7 +62,7 @@ export function JitterChart({ bode }) {
 export function LockChart({ step }) {
   const data = [{
     x: step.x, y: step.y, type: 'scatter', mode: 'lines',
-    name: 'phase step', line: { color: '#7e57c2', width: 2 },
+    name: 'phase step', line: { color: '#a78bfa', width: 2.4 },
   }]
   const layout = {
     ...BASE_LAYOUT, height: 240,
