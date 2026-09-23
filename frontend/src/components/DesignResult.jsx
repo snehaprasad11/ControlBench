@@ -1,19 +1,20 @@
 import { fmt, fmtHz, fmtSec, fmtOhm, fmtFarad } from '../format'
 
-// Loop-filter component values (the "controller" LockBench synthesised).
-export function LoopFilterCard({ lf, icpMa, n, kvco }) {
+// Loop-filter component values (the "controller" LockBench synthesised) + the chirp chain.
+export function LoopFilterCard({ lf, icpMa, n, kvco, radarRfHz, nMult }) {
   return (
     <div className="card">
-      <h2>Designed loop filter <span className="sub">order {lf.order}</span></h2>
+      <h2>Designed loop filter <span className="sub">buildable R / C values · order {lf.order}</span></h2>
       <div className="kv">
         <div><span>R</span><b>{fmtOhm(lf.r_ohm)}</b></div>
         <div><span>C_main</span><b>{fmtFarad(lf.c_main_nf * 1e-9)}</b></div>
         <div><span>C_shunt</span><b>{lf.c_shunt_nf > 0 ? fmtFarad(lf.c_shunt_nf * 1e-9) : '—'}</b></div>
         <div><span>zero</span><b>{fmtHz(lf.zero_hz)}</b></div>
         <div><span>3rd pole</span><b>{lf.pole3_hz ? fmtHz(lf.pole3_hz) : '—'}</b></div>
-        <div><span>N</span><b>{Math.round(n)}</b></div>
+        <div><span>N (divider)</span><b>{Math.round(n)}</b></div>
         <div><span>Icp</span><b>{fmt(icpMa)} mA</b></div>
         <div><span>Kvco</span><b>{fmt(kvco, 0)} MHz/V</b></div>
+        {radarRfHz ? <div><span>chirp chain</span><b>×{nMult} → {(radarRfHz / 1e9).toFixed(1)} GHz</b></div> : null}
       </div>
     </div>
   )

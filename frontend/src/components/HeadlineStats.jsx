@@ -1,14 +1,14 @@
-import { fmt, fmtHz, fmtSec } from '../format'
+import { fmt, fmtSec } from '../format'
 
-// The four numbers a PLL designer reads first, as glowing headline tiles.
+// The four numbers a radar engineer reads first, as glowing headline tiles.
 export default function HeadlineStats({ result }) {
   const pn = result?.phase_noise
   if (!pn) return null
   const stats = [
-    { label: 'RMS jitter', value: fmtSec(pn.rms_jitter_s), tag: '12k–20M', tone: 'cyan' },
-    { label: 'Worst-case PM', value: `${fmt(result.worst.min_phase_margin_deg, 1)}°`, tag: 'across PVT', tone: result.passes ? 'green' : 'red' },
-    { label: 'Lock time', value: fmtSec(result.nominal.lock_time_s), tag: 'nominal', tone: 'violet' },
-    { label: 'Ref. spur', value: `${fmt(pn.reference_spur_dbc, 0)} dBc`, tag: 'estimate', tone: 'amber' },
+    { label: 'Radar RF', value: `${(result.radar_rf_hz / 1e9).toFixed(1)} GHz`, tag: `×${result.n_mult}`, tone: 'cyan' },
+    { label: 'Chirp settling', value: fmtSec(result.nominal.lock_time_s), tag: 'per chirp', tone: 'violet' },
+    { label: 'Phase noise', value: `${fmt(pn.pn_at_1mhz_dbc, 0)} dBc/Hz`, tag: '@1 MHz, at RF', tone: 'amber' },
+    { label: 'RMS jitter', value: fmtSec(pn.rms_jitter_s), tag: '12k–20M', tone: result.passes ? 'green' : 'red' },
   ]
   return (
     <div className="headline">

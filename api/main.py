@@ -177,18 +177,35 @@ def _bode(pll: PLLModel, fc_hint_hz: float) -> BodeOut:
     )
 
 
-def _phase_noise(pll: PLLModel, f_out_hz: float, f_pfd_hz: float) -> PhaseNoiseOut:
-    """Phase-noise profile, integrated RMS jitter, and a reference-spur estimate."""
+def _phase_noise(pll: PLLModel, f_out_hz: float, f_pfd_hz: float,
+                 n_mult: float = 1.0) -> PhaseNoiseOut:
+    """Phase-noise profile, integrated RMS jitter, and a reference-spur estimate.
+
+    For radar, the synthesizer output is multiplied by ``n_mult`` up to the RF carrier;
+    ideal frequency multiplication adds 20*log10(n_mult) to the phase noise (dBc/Hz) at
+    every offset, while the RMS *time* jitter is invariant (the carrier scales too).
+    """
     pn = phase_noise(pll, f_out_hz, f_pfd_hz)
     spur = reference_spur_dbc(pll, f_pfd_hz)
+    penalty = 20.0 * math.log10(n_mult) if n_mult > 1.0 else 0.0
+    carrier = f_out_hz * n_mult
+
+    total = [v + penalty for v in pn.total_dbc]
+    inband = [v + penalty for v in pn.inband_dbc]
+    vco = [v + penalty for v in pn.vco_dbc]
+    # Phase noise at 1 MHz offset (a common radar datasheet spec point).
+    i_1mhz = min(range(len(pn.offset_hz)), key=lambda i: abs(pn.offset_hz[i] - 1e6))
+
     return PhaseNoiseOut(
+        carrier_hz=carrier,
         offset_hz=pn.offset_hz,
-        total_dbc=pn.total_dbc,
-        inband_dbc=pn.inband_dbc,
-        vco_dbc=pn.vco_dbc,
-        rms_jitter_s=pn.rms_jitter_s,
+        total_dbc=total,
+        inband_dbc=inband,
+        vco_dbc=vco,
+        rms_jitter_s=pn.rms_jitter_s,           # invariant under ideal multiplication
         jitter_band_hz=list(pn.jitter_band_hz),
-        reference_spur_dbc=spur,
+        reference_spur_dbc=spur + penalty,
+        pn_at_1mhz_dbc=total[i_1mhz],
     )
 
 
@@ -252,6 +269,8 @@ def design(inp: DesignInput) -> DesignResponse:
         device=_device_out(dev),
         n=n,
         icp_ma=pll.icp_a * 1e3,
+        n_mult=inp.n_mult,
+        radar_rf_hz=inp.f_out_hz * inp.n_mult,
         kvco_mhz_per_v=pll.kvco_rad_per_v / (2 * np.pi * 1e6),
         loop_filter=_loop_filter_out(pll),
         nominal=_metrics_out(report.nominal),
@@ -261,7 +280,7 @@ def design(inp: DesignInput) -> DesignResponse:
         corners=corners,
         step_response=_step(pll, report.nominal.lock_time_s),
         bode=_bode(pll, inp.fc_hz),
-        phase_noise=_phase_noise(pll, inp.f_out_hz, inp.f_pfd_hz),
+        phase_noise=_phase_noise(pll, inp.f_out_hz, inp.f_pfd_hz, inp.n_mult),
     )
 
 

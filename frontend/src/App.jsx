@@ -8,20 +8,39 @@ import { BodeChart, JitterChart, LockChart, PhaseNoiseChart } from './components
 import Explore from './components/Explore'
 import Recommend from './components/Recommend'
 
-// Sensible starting point for a freshly-selected device.
+// Automotive temperature grades -> representative Kvco/Icp drift the PVT sweep uses.
+// (First-order mapping from temperature range to gain drift; see README limitations.)
+export const TEMP_GRADES = {
+  'Commercial (0–70 °C)': { kvco: 15, icp: 5 },
+  'Industrial (−40–85 °C)': { kvco: 22, icp: 7 },
+  'AEC-Q100 Grade 2 (−40–105 °C)': { kvco: 26, icp: 9 },
+  'AEC-Q100 Grade 1 (−40–125 °C)': { kvco: 30, icp: 10 },
+  'AEC-Q100 Grade 0 (−40–150 °C)': { kvco: 35, icp: 12 },
+}
+const DEFAULT_GRADE = 'AEC-Q100 Grade 1 (−40–125 °C)'
+
+// Ready-made automotive-radar operating points (synth output × multiplier → RF band).
+export const RADAR_PRESETS = {
+  '77 GHz LRR (long-range)':  { deviceId: 'lmx2594', vcoGHz: 9.625, pfdMHz: 100, fcKHz: 300, pmDeg: 55, nMult: 8 },
+  '77 GHz MRR (mid-range)':   { deviceId: 'lmx2594', vcoGHz: 9.625, pfdMHz: 150, fcKHz: 500, pmDeg: 55, nMult: 8 },
+  '24 GHz SRR (short-range)': { deviceId: 'adf5355', vcoGHz: 6.0,   pfdMHz: 50,  fcKHz: 200, pmDeg: 55, nMult: 4 },
+}
+
+// Defaults when a device is picked manually (keeps the current multiplier).
 function defaultsFor(dev) {
   const vcoMid = Math.sqrt(dev.vco_min_hz * dev.vco_max_hz)
-  const pfd = Math.min(dev.pfd_max_hz, 10e6)
+  const pfd = Math.min(dev.pfd_max_hz, 50e6)
   return {
     vcoGHz: +(vcoMid / 1e9).toFixed(3),
     pfdMHz: +(pfd / 1e6).toFixed(2),
-    fcKHz: +((pfd / 500) / 1e3).toFixed(1),   // ~fPFD/500, a safe loop bandwidth
-    pmDeg: 50,
+    fcKHz: +((pfd / 300) / 1e3).toFixed(1),
+    pmDeg: 55,
     icpMa: '',
   }
 }
 
 function buildBody(form) {
+  const g = TEMP_GRADES[form.tempGrade] || { kvco: 30, icp: 10 }
   return {
     device_id: form.deviceId,
     f_out_hz: Number(form.vcoGHz) * 1e9,
@@ -29,7 +48,8 @@ function buildBody(form) {
     fc_hz: Number(form.fcKHz) * 1e3,
     phase_margin_deg: Number(form.pmDeg),
     icp_ma: form.icpMa === '' ? null : Number(form.icpMa),
-    corner: { kvco_tol: Number(form.kvcoTolPct) / 100, icp_tol: Number(form.icpTolPct) / 100 },
+    n_mult: Number(form.nMult) || 1,
+    corner: { kvco_tol: g.kvco / 100, icp_tol: g.icp / 100 },
     spec: {
       min_phase_margin_deg: Number(form.minPmDeg),
       max_jitter_peaking_db: form.maxPeakDb === '' ? null : Number(form.maxPeakDb),
@@ -51,8 +71,8 @@ export default function App() {
   const device = devices.find((d) => d.id === form?.deviceId)
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
-  // Boot: load the real device library, retrying so a cold (sleeping) backend on a
-  // free tier wakes up gracefully instead of showing an error on first load.
+  // Boot: load the real device library (retrying so a cold free-tier backend wakes up
+  // gracefully), then seed the 77 GHz long-range-radar preset.
   useEffect(() => {
     let cancelled = false
     async function boot() {
@@ -62,10 +82,9 @@ export default function App() {
           if (cancelled) return
           setOnline(true)
           setDevices(devs)
-          const d = devs[0]
           setForm({
-            deviceId: d.id, ...defaultsFor(d),
-            kvcoTolPct: 30, icpTolPct: 10, minPmDeg: 45, maxPeakDb: 4,
+            ...RADAR_PRESETS['77 GHz LRR (long-range)'],
+            tempGrade: DEFAULT_GRADE, minPmDeg: 45, maxPeakDb: 4, icpMa: '',
           })
           return
         } catch {
@@ -83,18 +102,10 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
 
-  // Re-seed operating point when the device changes.
-  useEffect(() => {
-    if (!device) return
-    setForm((f) => ({ ...f, ...defaultsFor(device) }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form?.deviceId])
-
   const runDesign = useCallback(async (override) => {
     setError(null); setBusy(true)
     try {
-      const body = buildBody({ ...form, ...override })
-      const r = await design(body)
+      const r = await design(buildBody({ ...form, ...override }))
       setResult(r)
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }, [form])
@@ -110,6 +121,22 @@ export default function App() {
     try { setRecommendRes(await recommend(buildBody(form))) }
     catch (e) { setError(e.message) } finally { setBusy(false) }
   }, [form])
+
+  // Apply a whole radar preset, then design it.
+  const applyPreset = (name) => {
+    const p = RADAR_PRESETS[name]
+    if (!p) return
+    setForm((f) => ({ ...f, ...p, icpMa: '' }))
+    runDesign({ ...p, icpMa: '' })
+  }
+
+  // Manual device change re-seeds a safe operating point for that part.
+  const changeDevice = (id) => {
+    const d = devices.find((x) => x.id === id)
+    const seed = d ? defaultsFor(d) : {}
+    setForm((f) => ({ ...f, deviceId: id, ...seed }))
+    runDesign({ deviceId: id, ...seed })
+  }
 
   // Apply a design point (from Explore or ML) into the form and verify it.
   const applyPoint = (fc_hz, pm, icp_ma) => {
@@ -128,6 +155,8 @@ export default function App() {
     return <div className="app"><div className="card loading">{bootMsg}</div></div>
   }
 
+  const radarRfGHz = (Number(form.vcoGHz) * (Number(form.nMult) || 1)).toFixed(1)
+
   return (
     <div className="app">
       <div className="header">
@@ -136,15 +165,18 @@ export default function App() {
             <><span className={'dot ' + (online ? 'up' : 'down')} />{online ? 'API connected' : 'API offline'}</>
           )}
         </div>
-        <h1>Lock<span className="accent">Bench</span></h1>
-        <p>Design a charge-pump PLL loop filter for a <b>real synthesizer IC</b>, then prove it holds
-           phase margin, lock time and jitter peaking across every <b>PVT corner</b>.</p>
+        <h1>Lock<span className="accent">Bench</span> <span className="tagline-badge">automotive radar</span></h1>
+        <p>Design the <b>chirp-synthesizer PLL</b> for an <b>FMCW automotive radar</b> — and prove it holds
+           chirp settling, phase noise and jitter across the full <b>automotive temperature range</b>.</p>
       </div>
 
       <div className="grid">
         <div>
           <Controls
             devices={devices} device={device} form={form} setField={setField}
+            presets={Object.keys(RADAR_PRESETS)} grades={Object.keys(TEMP_GRADES)}
+            radarRfGHz={radarRfGHz}
+            onApplyPreset={applyPreset} onChangeDevice={changeDevice}
             onDesign={() => runDesign()} onExplore={runExplore} onRecommend={runRecommend}
             busy={busy}
           />
@@ -165,34 +197,35 @@ export default function App() {
 
           {result && (
             <>
-              <Verdict passes={result.passes} violations={result.violations} />
+              <Verdict passes={result.passes} violations={result.violations} grade={form.tempGrade} />
               <HeadlineStats result={result} />
 
               {result.phase_noise && (
                 <div className="card">
-                  <h2>Phase noise <span className="sub">total = PLL/reference (in-band) + VCO (out-of-band)</span></h2>
+                  <h2>Phase noise <span className="sub">at {(result.phase_noise.carrier_hz / 1e9).toFixed(0)} GHz RF — sets radar detection sensitivity</span></h2>
                   <PhaseNoiseChart pn={result.phase_noise} />
                 </div>
               )}
 
               <div className="card">
-                <h2>Open-loop Bode <span className="sub">crossover = loop bandwidth; phase gap to −180° = phase margin</span></h2>
-                <BodeChart bode={result.bode} bandwidthHz={result.nominal.loop_bandwidth_hz} />
+                <h2>Chirp lock transient <span className="sub">how fast the synth settles before each chirp</span></h2>
+                <LockChart step={result.step_response} />
               </div>
 
               <div className="grid two-col">
                 <div className="card">
-                  <h2>Jitter peaking <span className="sub">peak of |H|</span></h2>
-                  <JitterChart bode={result.bode} />
+                  <h2>Open-loop Bode <span className="sub">crossover = loop BW; gap to −180° = phase margin</span></h2>
+                  <BodeChart bode={result.bode} bandwidthHz={result.nominal.loop_bandwidth_hz} />
                 </div>
                 <div className="card">
-                  <h2>Lock transient <span className="sub">phase step</span></h2>
-                  <LockChart step={result.step_response} />
+                  <h2>Jitter peaking <span className="sub">peak of |H|</span></h2>
+                  <JitterChart bode={result.bode} />
                 </div>
               </div>
 
               <MetricsTable nominal={result.nominal} worst={result.worst} />
-              <LoopFilterCard lf={result.loop_filter} icpMa={result.icp_ma} n={result.n} kvco={result.kvco_mhz_per_v} />
+              <LoopFilterCard lf={result.loop_filter} icpMa={result.icp_ma} n={result.n}
+                kvco={result.kvco_mhz_per_v} radarRfHz={result.radar_rf_hz} nMult={result.n_mult} />
               <CornerTable corners={result.corners} minPm={Number(form.minPmDeg)} />
             </>
           )}

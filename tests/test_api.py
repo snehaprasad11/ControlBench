@@ -1,5 +1,7 @@
 """Tests for the LockBench FastAPI backend."""
 
+import math
+
 from fastapi.testclient import TestClient
 
 from api.main import app
@@ -55,6 +57,29 @@ def test_design_returns_filter_metrics_and_plots():
     assert len(pn["offset_hz"]) == len(pn["total_dbc"]) > 0
     assert pn["rms_jitter_s"] > 0
     assert pn["reference_spur_dbc"] < 0
+    # radar defaults (no multiplier): RF == synthesizer output
+    assert body["n_mult"] == 1.0
+    assert body["radar_rf_hz"] == DESIGN["f_out_hz"]
+
+
+def test_radar_frequency_multiplication_to_77ghz():
+    """A x8 multiplier reaches ~77 GHz and worsens phase noise by 20*log10(8) ~ 18 dB,
+    while the RMS time jitter is unchanged (multiplication scales the carrier too)."""
+    base = {
+        "device_id": "lmx2594", "f_out_hz": 9.625e9, "f_pfd_hz": 100e6,
+        "fc_hz": 300e3, "phase_margin_deg": 55.0,
+        "corner": {"kvco_tol": 0.30, "icp_tol": 0.10},
+        "spec": {"min_phase_margin_deg": 45.0},
+    }
+    r1 = client.post("/api/design", json={**base, "n_mult": 1}).json()
+    r8 = client.post("/api/design", json={**base, "n_mult": 8}).json()
+    assert abs(r8["radar_rf_hz"] - 77.0e9) < 0.1e9
+    assert r8["phase_noise"]["carrier_hz"] == r8["radar_rf_hz"]
+    # ~18 dB worse phase noise at 1 MHz under x8 multiplication
+    delta = r8["phase_noise"]["pn_at_1mhz_dbc"] - r1["phase_noise"]["pn_at_1mhz_dbc"]
+    assert abs(delta - 20 * math.log10(8)) < 0.5
+    # time jitter invariant under ideal multiplication
+    assert abs(r8["phase_noise"]["rms_jitter_s"] - r1["phase_noise"]["rms_jitter_s"]) < 1e-16
 
 
 def test_design_rejects_out_of_range_output():

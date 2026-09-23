@@ -35,15 +35,19 @@ plt.rcParams.update({"font.size": 10, "axes.edgecolor": "#c8d3e0",
                      "axes.grid": True, "grid.color": "#e6edf5", "figure.dpi": 130})
 
 
-def _adf4351_design():
-    dev = get_device("adf4351")
-    n = divider_for_output(dev, f_out_hz=2.4e9, f_pfd_hz=10e6)
-    pll = design_pll(dev, n=n, fc_hz=20e3, phase_margin_deg=50.0)
+# 77 GHz long-range-radar profile: LMX2594 at 9.625 GHz, multiplied x8 to the RF band.
+RADAR_FOUT, RADAR_FPFD, RADAR_NMULT = 9.625e9, 100e6, 8
+
+
+def _radar_design():
+    dev = get_device("lmx2594")
+    n = divider_for_output(dev, f_out_hz=RADAR_FOUT, f_pfd_hz=RADAR_FPFD)
+    pll = design_pll(dev, n=n, fc_hz=300e3, phase_margin_deg=55.0)
     return dev, n, pll
 
 
 def fig_bode():
-    _dev, _n, pll = _adf4351_design()
+    _dev, _n, pll = _radar_design()
     m = evaluate(pll)
     f = np.logspace(1, 7, 800)
     w = 2 * np.pi * f
@@ -59,13 +63,13 @@ def fig_bode():
     ax2 = ax1.twinx(); ax2.grid(False)
     ax2.semilogx(f, ph, color=ACCENT, lw=2, label="∠L (°)")
     ax2.set_ylabel("∠L (°)", color=ACCENT)
-    ax1.set_title(f"ADF4351 open-loop Bode — f_c ≈ {m.loop_bandwidth_hz/1e3:.0f} kHz, "
+    ax1.set_title(f"77 GHz radar loop (LMX2594 ×8) — f_c ≈ {m.loop_bandwidth_hz/1e3:.0f} kHz, "
                   f"PM = {m.phase_margin_deg:.0f}°", color=NAVY)
     fig.tight_layout(); fig.savefig(IMG / "bode.png"); plt.close(fig)
 
 
 def fig_pvt():
-    _dev, _n, pll = _adf4351_design()
+    _dev, _n, pll = _radar_design()
     results = sweep_corners(pll, CornerSpec(kvco_tol=0.30, icp_tol=0.10))
     names = [r.corner.name.replace(", ", "\n") for r in results]
     pms = [r.metrics.phase_margin_deg for r in results]
@@ -77,24 +81,26 @@ def fig_pvt():
     a.axhline(45, color=BAD, ls="--", lw=1, label="spec: PM ≥ 45°")
     a.set_xticks(range(len(names))); a.set_xticklabels(names, fontsize=7)
     a.set_ylabel("phase margin (°)"); a.set_ylim(0, max(pms) + 8); a.legend(fontsize=8)
-    a.set_title("Phase margin across PVT", color=NAVY)
+    a.set_title("Phase margin across temperature", color=NAVY)
     b.bar(range(len(locks)), locks, color=BLUE)
     b.set_xticks(range(len(names))); b.set_xticklabels(names, fontsize=7)
-    b.set_ylabel("lock time (µs)")
-    b.set_title("Lock time across PVT", color=NAVY)
+    b.set_ylabel("chirp settling (µs)")
+    b.set_title("Chirp settling across temperature", color=NAVY)
     fig.tight_layout(); fig.savefig(IMG / "pvt_corners.png"); plt.close(fig)
 
 
 def fig_phase_noise():
-    dev, _n, pll = _adf4351_design()
-    pn = phase_noise(pll, 2.4e9, 10e6)
+    dev, _n, pll = _radar_design()
+    pn = phase_noise(pll, RADAR_FOUT, RADAR_FPFD)
+    penalty = 20 * np.log10(RADAR_NMULT)         # referred to the 77 GHz radar carrier
+    rf_ghz = RADAR_FOUT * RADAR_NMULT / 1e9
     fig, ax = plt.subplots(figsize=(7, 3.6))
-    ax.semilogx(pn.offset_hz, pn.inband_dbc, color=BLUE, lw=1.2, ls=":", label="PLL / ref")
-    ax.semilogx(pn.offset_hz, pn.vco_dbc, color=ACCENT, lw=1.2, ls=":", label="VCO")
-    ax.semilogx(pn.offset_hz, pn.total_dbc, color="#0b8fa8", lw=2.4, label="total")
+    ax.semilogx(pn.offset_hz, np.array(pn.inband_dbc) + penalty, color=BLUE, lw=1.2, ls=":", label="PLL / ref")
+    ax.semilogx(pn.offset_hz, np.array(pn.vco_dbc) + penalty, color=ACCENT, lw=1.2, ls=":", label="VCO")
+    ax.semilogx(pn.offset_hz, np.array(pn.total_dbc) + penalty, color="#0b8fa8", lw=2.4, label="total")
     ax.set_xlabel("offset frequency (Hz)"); ax.set_ylabel("ℒ(f) (dBc/Hz)")
-    ax.set_ylim(-160, -60); ax.legend(fontsize=8)
-    ax.set_title(f"ADF4351 phase noise — {pn.rms_jitter_s*1e12:.1f} ps RMS jitter "
+    ax.set_ylim(-150, -50); ax.legend(fontsize=8)
+    ax.set_title(f"{rf_ghz:.0f} GHz radar phase noise — {pn.rms_jitter_s*1e12:.1f} ps RMS jitter "
                  f"(12 kHz–20 MHz)", color=NAVY)
     fig.tight_layout(); fig.savefig(IMG / "phase_noise.png"); plt.close(fig)
 

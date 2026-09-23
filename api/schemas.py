@@ -28,6 +28,8 @@ class DesignInput(BaseModel):
     fc_hz: float = Field(..., gt=0, description="Target loop bandwidth (Hz)")
     phase_margin_deg: float = Field(50.0, gt=0, lt=90)
     icp_ma: float | None = Field(None, gt=0, description="Charge-pump current (mA); default = device default")
+    n_mult: float = Field(1.0, ge=1, description="Frequency multiplier from the synthesizer "
+                          "output up to the radar RF carrier (e.g. x8 to reach ~77 GHz)")
     corner: CornerSpecIn = CornerSpecIn()
     spec: SpecIn = SpecIn()
 
@@ -117,6 +119,7 @@ class BodeOut(BaseModel):
 
 
 class PhaseNoiseOut(BaseModel):
+    carrier_hz: float              # the carrier the noise is referred to (radar RF)
     offset_hz: list[float]
     total_dbc: list[float]
     inband_dbc: list[float]
@@ -124,12 +127,15 @@ class PhaseNoiseOut(BaseModel):
     rms_jitter_s: float
     jitter_band_hz: list[float]
     reference_spur_dbc: float
+    pn_at_1mhz_dbc: float          # phase noise at 1 MHz offset (a common radar spec point)
 
 
 class DesignResponse(BaseModel):
     device: DeviceOut
     n: float
     icp_ma: float
+    n_mult: float
+    radar_rf_hz: float             # synthesizer output x n_mult (e.g. ~77 GHz)
     kvco_mhz_per_v: float
     loop_filter: LoopFilterOut
     nominal: MetricsOut

@@ -9,18 +9,26 @@ function Field({ label, hint, children }) {
   )
 }
 
-export default function Controls({ devices, device, form, setField, onDesign, onExplore, onRecommend, busy }) {
+export default function Controls({
+  devices, device, form, setField, presets, grades, radarRfGHz,
+  onApplyPreset, onChangeDevice, onDesign, onExplore, onRecommend, busy,
+}) {
   return (
     <div className="card controls">
-      <h2>1 · Pick a real chip</h2>
-      <Field label="Synthesizer IC">
-        <select value={form.deviceId} onChange={(e) => setField('deviceId', e.target.value)}>
+      <h2>1 · Radar profile</h2>
+      <Field label="Preset">
+        <select value="" onChange={(e) => e.target.value && onApplyPreset(e.target.value)}>
+          <option value="">— load a radar operating point —</option>
+          {presets.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </Field>
+      <Field label="Chirp synthesizer IC">
+        <select value={form.deviceId} onChange={(e) => onChangeDevice(e.target.value)}>
           {devices.map((d) => (
             <option key={d.id} value={d.id}>{d.name} — {d.vendor}</option>
           ))}
         </select>
       </Field>
-
       {device && (
         <div className="device-facts">
           <div>{device.category}</div>
@@ -29,22 +37,27 @@ export default function Controls({ devices, device, form, setField, onDesign, on
         </div>
       )}
 
-      <h2>2 · Operating point</h2>
+      <h2>2 · Chirp source → RF</h2>
       <div className="two">
         <Field label="VCO freq" hint="GHz">
           <input type="number" step="0.01" value={form.vcoGHz}
                  onChange={(e) => setField('vcoGHz', e.target.value)} />
         </Field>
-        <Field label="PFD freq" hint="MHz">
-          <input type="number" step="0.1" value={form.pfdMHz}
-                 onChange={(e) => setField('pfdMHz', e.target.value)} />
+        <Field label="× multiplier" hint="to RF">
+          <input type="number" step="1" min="1" value={form.nMult}
+                 onChange={(e) => setField('nMult', e.target.value)} />
         </Field>
       </div>
+      <div className="rf-badge">radar RF ≈ <b>{radarRfGHz} GHz</b></div>
+      <Field label="PFD freq" hint="MHz">
+        <input type="number" step="1" value={form.pfdMHz}
+               onChange={(e) => setField('pfdMHz', e.target.value)} />
+      </Field>
 
       <h2>3 · Loop targets</h2>
       <div className="two">
         <Field label="Loop BW" hint="kHz">
-          <input type="number" step="1" value={form.fcKHz}
+          <input type="number" step="10" value={form.fcKHz}
                  onChange={(e) => setField('fcKHz', e.target.value)} />
         </Field>
         <Field label="Phase margin" hint="°">
@@ -61,17 +74,12 @@ export default function Controls({ devices, device, form, setField, onDesign, on
         </select>
       </Field>
 
-      <h2>4 · PVT corners</h2>
-      <div className="two">
-        <Field label="Kvco ±" hint="%">
-          <input type="number" step="5" value={form.kvcoTolPct}
-                 onChange={(e) => setField('kvcoTolPct', e.target.value)} />
-        </Field>
-        <Field label="Icp ±" hint="%">
-          <input type="number" step="5" value={form.icpTolPct}
-                 onChange={(e) => setField('icpTolPct', e.target.value)} />
-        </Field>
-      </div>
+      <h2>4 · Temperature grade</h2>
+      <Field label="Automotive qualification" hint="sets PVT drift">
+        <select value={form.tempGrade} onChange={(e) => setField('tempGrade', e.target.value)}>
+          {grades.map((g) => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </Field>
 
       <h2>5 · Spec (must hold at every corner)</h2>
       <div className="two">
@@ -87,7 +95,7 @@ export default function Controls({ devices, device, form, setField, onDesign, on
 
       <div className="actions">
         <button className="primary" onClick={onDesign} disabled={busy}>
-          {busy ? <span className="spinner" /> : null}{busy ? 'Working…' : 'Design & check PVT'}
+          {busy ? <span className="spinner" /> : null}{busy ? 'Working…' : 'Design & check temperature'}
         </button>
         <button onClick={onExplore} disabled={busy}>Find robust design</button>
         <button onClick={onRecommend} disabled={busy}>⚡ ML recommend</button>
