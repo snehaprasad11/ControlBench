@@ -200,6 +200,18 @@ export default function App() {
               <Verdict passes={result.passes} violations={result.violations} grade={form.tempGrade} />
               <HeadlineStats result={result} />
 
+              <details className="card explain">
+                <summary>What do these outputs mean?</summary>
+                <ul>
+                  <li><b>Radar RF</b> — the final carrier the chirp is transmitted at (synth output × multiplier).</li>
+                  <li><b>Chirp settling</b> — how long the synth needs to settle before each chirp; shorter means a faster radar frame rate and higher measurable velocity.</li>
+                  <li><b>Phase noise (@1 MHz)</b> — the carrier's spectral purity at the RF frequency; lower (more negative) lets the radar detect small targets next to large ones.</li>
+                  <li><b>RMS jitter</b> — the phase noise integrated into a single timing-error number.</li>
+                  <li><b>Loop filter R / C</b> — the actual resistor and capacitor values you would build on the board.</li>
+                  <li><b>Verdict</b> — green only if phase margin, lock and jitter all stay in-spec at <em>every</em> temperature corner, not just at room temperature.</li>
+                </ul>
+              </details>
+
               {result.phase_noise && (
                 <div className="card">
                   <h2>Phase noise <span className="sub">at {(result.phase_noise.carrier_hz / 1e9).toFixed(0)} GHz RF — sets radar detection sensitivity</span></h2>
