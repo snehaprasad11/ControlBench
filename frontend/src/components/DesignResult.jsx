@@ -22,10 +22,13 @@ export function LoopFilterCard({ lf, icpMa, n, kvco, radarRfHz, nMult }) {
 
 // Nominal vs worst-case-across-PVT metrics side by side.
 export function MetricsTable({ nominal, worst }) {
+  // Gain margin is null when the phase never reaches -180 deg -> infinite gain margin.
+  const gm = (x) => (x === null || x === undefined ? '∞ dB' : `${fmt(x, 1)} dB`)
+  const infiniteGm = nominal.gain_margin_db === null || nominal.gain_margin_db === undefined
   const rows = [
     ['Loop bandwidth', fmtHz(nominal.loop_bandwidth_hz), `${fmtHz(worst.min_bandwidth_hz)} – ${fmtHz(worst.max_bandwidth_hz)}`],
     ['Phase margin', `${fmt(nominal.phase_margin_deg, 1)}°`, `${fmt(worst.min_phase_margin_deg, 1)}° (worst)`],
-    ['Gain margin', `${fmt(nominal.gain_margin_db, 1)} dB`, `${fmt(worst.min_gain_margin_db, 1)} dB (worst)`],
+    ['Gain margin', gm(nominal.gain_margin_db), `${gm(worst.min_gain_margin_db)} (worst)`],
     ['Lock time', fmtSec(nominal.lock_time_s), `${fmtSec(worst.max_lock_time_s)} (worst)`],
     ['Jitter peaking', `${fmt(nominal.jitter_peaking_db, 2)} dB`, `${fmt(worst.max_jitter_peaking_db, 2)} dB (worst)`],
   ]
@@ -40,6 +43,12 @@ export function MetricsTable({ nominal, worst }) {
           ))}
         </tbody>
       </table>
+      {infiniteGm && (
+        <p className="section-note" style={{ marginTop: 10 }}>
+          ∞ gain margin: the loop's phase never reaches −180°, so it cannot be destabilised
+          by gain alone — phase margin is the binding stability limit.
+        </p>
+      )}
     </div>
   )
 }
